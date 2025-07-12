@@ -48,7 +48,7 @@ var (
 	// This means APK should be a child of JAR detector, but in practice,
 	// the decisive signature for JAR might be located at the end of the file
 	// and not reachable because of library readLimit.
-	zip = newMIME("application/zip", ".zip", magic.Zip, xlsx, docx, pptx, epub, apk, jar, odt, ods, odp, odg, odf, odc, sxc).
+	zip = newMIME("application/zip", ".zip", magic.Zip, docx, pptx, xlsx, epub, apk, jar, odt, ods, odp, odg, odf, odc, sxc).
 		alias("application/x-zip", "application/x-zip-compressed")
 	tar = newMIME("application/x-tar", ".tar", magic.Tar)
 	xar = newMIME("application/x-xar", ".xar", magic.Xar)
@@ -60,10 +60,11 @@ var (
 	docx = newMIME("application/vnd.openxmlformats-officedocument.wordprocessingml.document", ".docx", magic.Docx)
 	pptx = newMIME("application/vnd.openxmlformats-officedocument.presentationml.presentation", ".pptx", magic.Pptx)
 	epub = newMIME("application/epub+zip", ".epub", magic.Epub)
-	jar  = newMIME("application/jar", ".jar", magic.Jar)
-	apk  = newMIME("application/vnd.android.package-archive", ".apk", magic.APK)
-	ole  = newMIME("application/x-ole-storage", "", magic.Ole, msi, aaf, msg, xls, pub, ppt, doc)
-	msi  = newMIME("application/x-ms-installer", ".msi", magic.Msi).
+	jar  = newMIME("application/java-archive", ".jar", magic.Jar).
+		alias("application/jar", "application/jar-archive", "application/x-java-archive")
+	apk = newMIME("application/vnd.android.package-archive", ".apk", magic.APK)
+	ole = newMIME("application/x-ole-storage", "", magic.Ole, msi, aaf, msg, xls, pub, ppt, doc)
+	msi = newMIME("application/x-ms-installer", ".msi", magic.Msi).
 		alias("application/x-windows-installer", "application/x-msi")
 	aaf = newMIME("application/octet-stream", ".aaf", magic.Aaf)
 	doc = newMIME("application/msword", ".doc", magic.Doc).

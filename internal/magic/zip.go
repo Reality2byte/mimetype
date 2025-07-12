@@ -42,12 +42,41 @@ func Zip(raw []byte, limit uint32) bool {
 		(raw[3] == 0x4 || raw[3] == 0x6 || raw[3] == 0x8)
 }
 
-// Jar matches a Java archive file.
+// Jar matches a Java archive file. There are two types of Jar files:
+// 1. the ones that can be opened with jexec and have 0xCAFE optional flag
+// https://stackoverflow.com/tags/executable-jar/info
+// 2. regular jars, same as above, just without the executable flag
+// https://bugs.freebsd.org/bugzilla/show_bug.cgi?id=262278#c0
+// There is an argument to only check for manifest, since it's the common nominator
+// for both executable and non-executable versions. But zipContains is unreliable
+// because it does linear search for signatures (instead of relying on offsets
+// told by the file.)
 func Jar(raw []byte, limit uint32) bool {
-	return zipContains(raw, []byte("META-INF/MANIFEST.MF"), false)
+	return executableJar(raw) ||
+		zipContains(raw, []byte("META-INF/MANIFEST.MF"), false, 1) ||
+		zipContains(raw, []byte("META-INF/"), false, 1)
+
 }
 
-func zipContains(raw, sig []byte, msoCheck bool) bool {
+// An executable Jar has a 0xCAFE flag enabled in the first zip entry.
+// The rule from file/file is:
+// >(26.s+30)	leshort	0xcafe		Java archive data (JAR)
+func executableJar(b scan.Bytes) bool {
+	b.Advance(0x1A)
+	offset, ok := b.Uint16()
+	if !ok {
+		return false
+	}
+	b.Advance(int(offset) + 2)
+
+	cafe, ok := b.Uint16()
+	return ok && cafe == 0xCAFE
+}
+
+// zipContains goes over entries inside the raw zip and checks if any of them are
+// equal to sig. msoCheck makes it look for additional entries and checkLength
+// makes the lookAt limits the number of entries to look for.
+func zipContains(raw, sig []byte, msoCheck bool, lookAt int) bool {
 	b := scan.Bytes(raw)
 	pk := []byte("PK\003\004")
 	if len(b) < 0x1E {
@@ -91,11 +120,18 @@ func zipContains(raw, sig []byte, msoCheck bool) bool {
 	if !b.Advance(nextHeader) {
 		return false
 	}
-	if bytes.HasPrefix(b, sig) {
+	// This is the second entry in zip.
+	if lookAt > 1 && bytes.HasPrefix(b, sig) {
 		return true
 	}
 
-	for i := 0; i < 4; i++ {
+	// Previously i was 4 at max, but #679 reported zip files where signatures
+	// occur later than 4. Because mimetype only looks at the file header, this
+	// for loop might as well be unbounded, ie: until the input bytes are all
+	// consumed. But users can call SetLimit(0) to make mimetype analyze whole
+	// files. So keep max 100 just in case. The reason I initially made it 4
+	// was because FILE(1) had this limit.
+	for i := 3; i < lookAt; i++ {
 		if !b.Advance(0x1A) {
 			return false
 		}
@@ -124,7 +160,7 @@ func APK(raw []byte, _ uint32) bool {
 		[]byte("res/drawable"),
 	}
 	for _, sig := range apkSignatures {
-		if zipContains(raw, sig, false) {
+		if zipContains(raw, sig, false, 100) {
 			return true
 		}
 	}

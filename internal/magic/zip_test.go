@@ -89,13 +89,38 @@ func TestZeroZip(t *testing.T) {
 		files: []string{"customXml", "ppt/media"},
 		pptx:  true,
 	}, {
-		name:  "META-INF",
+		name:  "manifest file first",
 		files: []string{"META-INF/MANIFEST.MF"},
 		jar:   true,
 	}, {
-		name:  "1 2 3 4 5 6 META-INF", // we only check first 6 files
-		files: []string{"1", "2", "3", "4", "5", "6", "META-INF/MANIFEST.MF"},
+		name:  "manifest dir first",
+		files: []string{"META-INF/"},
+		jar:   true,
+	}, {
+		name:  "manifest second file",
+		files: []string{"1", "META-INF/MANIFEST.MF"},
 		jar:   false,
+	}, {
+		name: "ppt/ after 15 files",
+		files: []string{
+			"[Content_Types].xml",
+			"_rels/.rels",
+			"customXml/_rels/item1.xml",
+			"customXml/_rels/item2.xml.rels",
+			"customXml/_rels/item3.xml.rels",
+			"customXml/_rels/item4.xml.rels",
+			"customXml/item1.xml",
+			"customXml/item2.xml",
+			"customXml/item3.xml",
+			"customXml/itemProps1.xml",
+			"customXml/itemProps2.xml",
+			"customXml/itemProps3.xml",
+			"docProps/app.xml",
+			"docProps/core.xml",
+			"docProps/custom.xml",
+			"ppt/_rels/presentation.xml.rel",
+		},
+		pptx: true,
 	}}
 
 	for _, tc := range tcases {
